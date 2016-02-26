@@ -1,0 +1,16 @@
+---
+name: Infection
+version: dev-build-1
+main: TDroidd\Infection\Main
+api:
+- 1.13.1
+- 1.14.0
+- 2.0.0
+author: TonyDroidd
+description: Minigame for NPE
+
+commands:
+    infect:
+        permission: npecore.dd
+    gi:
+        permission: dddd.dd
