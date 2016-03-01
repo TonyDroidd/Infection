@@ -10,7 +10,5 @@ author: TonyDroidd
 description: Minigame for NPE
 
 commands:
-    infect:
-        permission: npecore.dd
-    gi:
-        permission: dddd.dd
+    infection:
+        permission: infection.command

@@ -1,16 +1,24 @@
 <?php
 namespace TDroidd\Infection;
+use pocketmine\command\CommandExecutor;
+use pocketmine\command\CommandSender;
 use pocketmine\Server;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\Player;
 use pocketmine\utils\TextFormat;
 use TDroidd\Infection\EventListener;
+use TDroidd\Infection\Tasks\WaitTask;
+use pocketmine\utils\Config;
+use pocketmine\command\PluginIdentifiableCommand;
+use pocketmine\command\Command;
+
 class Main extends PluginBase implements Listener{
 
     public $infected = [];
     public $healthy_payers = [];
     public $inGame = [];
+    public $config;
 
     public $game_status = self::GAME_WAITING;
     const GAME_WAITING = 0;
@@ -19,10 +27,11 @@ class Main extends PluginBase implements Listener{
 
     public function onEnable(){
         $this->getServer()->getPluginManager()->registerEvents(new EventListener($this),$this);
-        $this->getCommand("infect")->setExecutor(new Commands($this));
-        $this->getCommand("gi")->setExecutor(new Commands($this));
+        //$this->getCommand("infection")->setExecutor(new Commands($this));
         $this->getLogger()->info(Main::COLOR("&bInfection plugin &aEnabled!"));
         $this->registerEvents();
+        @mkdir($this->getDataFolder());
+        $this->config = (new Config($this->getDataFolder() . "config.yml", Config::YAML));
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 
@@ -55,6 +64,10 @@ class Main extends PluginBase implements Listener{
         $message = str_replace("&o", TextFormat::ITALIC, $message);
         $message = str_replace("&r", TextFormat::RESET, $message);
         return $message;
+    }
+
+    public function getPlayersInGame(){
+        return $this->inGame;
     }
 
     public function addGamePlayer(Player $player){
@@ -133,4 +146,57 @@ class Main extends PluginBase implements Listener{
         }
         return true;
     }
+
+    public function startGame(){
+        $this->game_status = Main::GAME_STARTED;
+    }
+
+    public function endGame(){
+        $this->game_status = Main::GAME_WAITING;
+    }
+
+    public function startTask($time){
+        $this->getServer()->getScheduler()->scheduleRepeatingTask(new WaitTask($this), $time * 20);
+        $time--;
+        $players = $this->getPlayersInGame();
+        if($players instanceof Player){
+            $players->sendPopup(Main::COLOR("&aIniciando en &e" . $time . "&a segundos"));
+        }
+        if(count($this->getPlayersInGame()) === 16){
+            $this->getServer()->getScheduler()->cancelTasks($this);
+        }
+    }
+
+    public function onCommand(CommandSender $sender, Command $command, $label, array $args){
+        if (strtolower($command->getName()) == "infection") {
+            if ($sender instanceof Player) {
+                switch ($args) {
+                    case "join":
+                        if ($this->game_status === Main::GAME_WAITING) {
+                            $this->pickTeam($sender);
+                        } else {
+                            $sender->sendMessage(Main::COLOR("&cEl juego ya ha comenzado!"));
+                            return false;
+                        }
+                        break;
+                    case "setlobby":
+                        $x = $sender->getFloorX();
+                        $y = $sender->getFloorY();
+                        $z = $sender->getFloorZ();
+                        $level = $sender->getLevel()->getName();
+                        //$configlobb = $this->getConfig()->get("Game-Lobby");
+                        //$this->getConfig()->set("Game-Lobby", [$x, $y, $z, $level]);
+                        $sender->sendMessage(Main::COLOR("&aOk."));
+                        $this->getConfig()->save();
+                        break;
+                    case "setinfpos":
+                        break;
+                    case "sethealpos":
+                        break;
+                }
+            }
+        }
+        return true;
+    }
+
 }
